@@ -111,7 +111,7 @@ instance = {
     },
 }
 
-with open(f'{BASE}/model/instance_v1.json', 'w', encoding='utf-8') as f:
+with open(f'{BASE}/src/instance_v1.json', 'w', encoding='utf-8') as f:
     json.dump(instance, f, ensure_ascii=False, indent=1)
 
 # ---------- 实例报告（人读核查用） ----------
@@ -137,7 +137,7 @@ for r in RECYCLING:
     lines.append(f"| {r[0]} | 资源化 | {r[2]*1e4:,.0f} | {r[3]*1e4:,.0f} | {r[3]/r[2]*100:.1f}% |")
 for l in LANDFILL:
     lines.append(f"| {l[0]} | 消纳 | {l[2]}万m³余量 | — | — |")
-with open(f'{BASE}/model/instance_report.md', 'w', encoding='utf-8') as f:
+with open(f'{BASE}/src/instance_report.md', 'w', encoding='utf-8') as f:
     f.write('\n'.join(lines))
 print('\n'.join(lines[:8]))
-print('\n实例已生成: model/instance_v1.json, model/instance_report.md')
+print('\n实例已生成: src/instance_v1.json, src/instance_report.md')

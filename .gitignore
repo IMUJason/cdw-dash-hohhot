@@ -5,3 +5,5 @@ __pycache__/
 *.out
 .DS_Store
 experiments/
+instance_v1.json
+instance_report.md

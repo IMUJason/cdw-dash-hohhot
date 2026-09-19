@@ -1,0 +1,5 @@
+variant,DET_oos_CNY,SAA_oos_CNY,DASH010_oos_CNY,DASH_reduction_pct
+mixed_share_baseline,890559383,801204109,812743359,8.7
+pure_investment_share,909278502,826871458,840809397,7.5
+pure_population_share,873429340,804083456,816660002,6.5
+drop_2023_anchor,890559383,800087067,814943359,8.5

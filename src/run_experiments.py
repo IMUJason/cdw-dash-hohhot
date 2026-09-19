@@ -50,11 +50,11 @@ def make_batch_instance(base_inst, seed):
     return inst
 
 def reduce_scenarios(inst, scenarios, k=12, seed=7):
-    """简单场景缩减：保留3锚点 + 均匀抽取 k-3 个采样情景，权重归一。"""
+    """简单场景缩减：保留3锚点 + 均匀抽取 k-3 个采样情景，权重归一（在副本上归一，不修改调用方情景）。"""
     rng = random.Random(seed)
     anchors = [sc for sc in scenarios if sc['name'].startswith('anchor')]
     others = [sc for sc in scenarios if not sc['name'].startswith('anchor')]
-    keep = anchors + rng.sample(others, min(k - len(anchors), len(others)))
+    keep = [dict(sc) for sc in anchors + rng.sample(others, min(k - len(anchors), len(others)))]
     tot = sum(sc['prob'] for sc in keep)
     for sc in keep:
         sc['prob'] = sc['prob'] / tot
@@ -77,6 +77,7 @@ def extract_xconfig_cpx(inst, V):
         'xJ': {inst['sorting'][j]['name']: [round(gv(V['xJ'][j, t])) for t in range(1, T+1)] for j in inst['sorting']},
         'xK': {inst['recycling'][k]['name']: [round(gv(V['xK'][k, t])) for t in range(1, T+1)] for k in inst['recycling']},
         'xL': {inst['landfill'][l]['name']: [round(gv(V['xL'][l, t])) for t in range(1, T+1)] for l in inst['landfill']},
+        'zJ': {inst['sorting'][j]['name']: [round(gv(V['zJ'][j, t])) for t in range(1, T+1)] for j in inst['sorting']},
         'zK': {inst['recycling'][k]['name']: [round(gv(V['zK'][k, t])) for t in range(1, T+1)] for k in inst['recycling']},
         'rL': {inst['landfill'][l]['name']: [round(gv(V['rL'][l, t])) for t in range(1, T+1)] for l in inst['landfill']},
     }
@@ -156,7 +157,7 @@ def run_method_det(inst):
     mdl, sol, V = build_and_solve_saa(inst, mean_sc, 'det', retire_lstar=True, t_star=2)
     xcfg = extract_xconfig_cpx(inst, V)
     # 转为 cfg 结构
-    cfg = {'xJ': {}, 'xK': {}, 'xL': {}, 'zK': {}, 'rL': {}}
+    cfg = {'xJ': {}, 'xK': {}, 'xL': {}, 'zJ': {}, 'zK': {}, 'rL': {}}
     for name, seq in xcfg['xJ'].items():
         for j, info in inst['sorting'].items():
             if info['name'] == name: cfg['xJ'][j] = seq
@@ -169,6 +170,9 @@ def run_method_det(inst):
     for name, seq in xcfg['zK'].items():
         for k, info in inst['recycling'].items():
             if info['name'] == name: cfg['zK'][k] = seq
+    for name, seq in xcfg['zJ'].items():
+        for j, info in inst['sorting'].items():
+            if info['name'] == name: cfg['zJ'][j] = seq
     for name, seq in xcfg['rL'].items():
         for l, info in inst['landfill'].items():
             if info['name'] == name: cfg['rL'][l] = seq

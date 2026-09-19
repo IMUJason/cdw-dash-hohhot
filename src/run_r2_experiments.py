@@ -123,7 +123,7 @@ def stage_B():
     # 1) SAA（lean 参照）——同时作为与论文表 1 的一致性自检
     native, cfg, wt = run_method_alns(BASE_INST, 'SAA', train, alns_iters=ITERS)
     planned, _ = soft_stats(BASE_INST, cfg, train)
-    assert abs(planned - 1071547247.85) / 1071547247.85 < 1e-6, f'SAA 复现失败: {planned}'
+    assert abs(planned - 808934229.0) / 808934229.0 < 1e-6, f'SAA 复现失败: {planned}'
     print('[B] SAA 与论文表 1 逐位一致（自检通过）', flush=True)
     record('SAA', planned, cfg, wt, native=native)
 

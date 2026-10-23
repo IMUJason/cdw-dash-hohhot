@@ -126,57 +126,82 @@ def weighted_stats(costs, probs, plan_obj, unmets=None, recycs=None, budget=None
         out['recycled_mean_t'] = float((rm*rp).sum())
     return out
 
-def run_method_alns(inst, method, train_scen, alns_iters=250, alns_seed=42):
-    """返回 (plan_obj_on_full_train, cfg, walltime, alns_gap_vs_saa?)"""
+def dash_scenarios(inst, train_scen, eps):
+    """DASH 压力混合情景集（论文式 (5)）：(1-λ)·经验分布 + λ·抬升分布。"""
+    wc = worst_case_scenarios(inst, train_scen, eps)
+    lam = min(eps / 0.3, 1.0)
+    full = []
+    for sc, w in zip(train_scen, wc):
+        full.append({'name': sc['name'], 'prob': sc['prob']*(1-lam), 'd': sc['d']})
+        full.append({'name': w['name'], 'prob': sc['prob']*lam, 'd': w['d']})
+    return full
+
+
+def _cfg_from_xconfig(inst, xcfg):
+    """CPLEX 解 → alns 风格的 cfg 结构（按 name 映射回内部 key）。"""
+    cfg = {'xJ': {}, 'xK': {}, 'xL': {}, 'zJ': {}, 'zK': {}, 'rL': {}}
+    for nm, tgt, key in [('xJ', inst['sorting'], 'xJ'), ('xK', inst['recycling'], 'xK'),
+                         ('xL', inst['landfill'], 'xL'), ('zJ', inst['sorting'], 'zJ'),
+                         ('zK', inst['recycling'], 'zK'), ('rL', inst['landfill'], 'rL')]:
+        for name, seq in xcfg[nm].items():
+            for k, info in tgt.items():
+                if info['name'] == name:
+                    cfg[key][k] = seq
+    return cfg
+
+
+def run_method_exact(inst, method, train_scen, time_limit=900, require_cover=True):
+    """CPLEX 精确求解两阶段程序（带服务级覆盖约束）。
+    返回 (plan_obj, cfg, walltime)；不可行/超时返回 (None, None, walltime)。"""
+    t0 = time.time()
+    if method.startswith('DRO'):
+        full = dash_scenarios(inst, train_scen, float(method.split('(')[1].rstrip(')')))
+    elif method == 'ROB':
+        T = inst['meta']['periods']
+        full = [{'name': 'wc', 'prob': 1.0,
+                 'd': {i: {t: train_scen[0]['d'][i][t]*1.2 for t in range(1, T+1)} for i in inst['demand']}}]
+    else:
+        full = train_scen
+    mdl, sol, V = build_and_solve_saa(inst, full, f'exact_{method}', retire_lstar=True, t_star=2,
+                                       log=False, require_cover=require_cover, time_limit=time_limit)
+    el = time.time() - t0
+    if not sol:
+        return None, None, el
+    xcfg = extract_xconfig_cpx(inst, V)
+    return sol.objective_value, _cfg_from_xconfig(inst, xcfg), el
+
+
+def run_method_alns(inst, method, train_scen, alns_iters=1000, alns_seed=42, obj_fn=None):
+    """返回 (plan_obj_on_full_train, cfg, walltime, alns_gap_vs_saa?)
+    V2.2：迭代预算 1000；内层 LP 施加服务级覆盖约束（与 CPLEX 同解一个问题）；
+    候选池在 full（完整训练情景集）上精确重评估后返回真最优（论文 Algorithm 1）。"""
     t0 = time.time()
     if method.startswith('DRO'):
         eps = float(method.split('(')[1].rstrip(')'))
-        wc = worst_case_scenarios(inst, train_scen, eps)
-        lam = min(eps / 0.3, 1.0)
-        full = []
-        for sc, w in zip(train_scen, wc):
-            full.append({'name': sc['name'], 'prob': sc['prob']*(1-lam), 'd': sc['d']})
-            full.append({'name': w['name'], 'prob': sc['prob']*lam, 'd': w['d']})
+        full = dash_scenarios(inst, train_scen, eps)
     elif method == 'ROB':
         T = inst['meta']['periods']
         full = [{'name': 'wc', 'prob': 1.0,
                  'd': {i: {t: train_scen[0]['d'][i][t]*1.2 for t in range(1, T+1)} for i in inst['demand']}}]
     else:  # SAA
         full = train_scen
-    # 情景缩减搜索
+    # 情景缩减搜索 + 候选池在全集上重评估
     search_scen = reduce_scenarios(inst, full, k=12, seed=7) if len(full) > 12 else full
-    best, best_cost_search, _, _ = alns(inst, search_scen, max_iter=alns_iters, seed=alns_seed, verbose=False)
-    plan_obj = eval_config(inst, best, full)
+    best, plan_obj, _, _ = alns(inst, search_scen, max_iter=alns_iters, seed=alns_seed,
+                                verbose=False, report_scen=full, obj_fn=obj_fn)
     return plan_obj, best, time.time()-t0
 
-def run_method_det(inst):
+def run_method_det(inst, time_limit=900):
+    """DET：均值情景的确定性规划（CPLEX 精确）。不带服务级覆盖约束——
+    这正是对比点：均值规划不承诺覆盖，情景方法承诺覆盖。"""
     t0 = time.time()
     T = inst['meta']['periods']
     mean_sc = [{'name': 'mean', 'prob': 1.0,
                 'd': {i: {t: inst['demand'][i]['d'][str(t)] for t in range(1, T+1)} for i in inst['demand']}}]
-    mdl, sol, V = build_and_solve_saa(inst, mean_sc, 'det', retire_lstar=True, t_star=2)
+    mdl, sol, V = build_and_solve_saa(inst, mean_sc, 'det', retire_lstar=True, t_star=2,
+                                       log=False, require_cover=False, time_limit=time_limit)
     xcfg = extract_xconfig_cpx(inst, V)
-    # 转为 cfg 结构
-    cfg = {'xJ': {}, 'xK': {}, 'xL': {}, 'zJ': {}, 'zK': {}, 'rL': {}}
-    for name, seq in xcfg['xJ'].items():
-        for j, info in inst['sorting'].items():
-            if info['name'] == name: cfg['xJ'][j] = seq
-    for name, seq in xcfg['xK'].items():
-        for k, info in inst['recycling'].items():
-            if info['name'] == name: cfg['xK'][k] = seq
-    for name, seq in xcfg['xL'].items():
-        for l, info in inst['landfill'].items():
-            if info['name'] == name: cfg['xL'][l] = seq
-    for name, seq in xcfg['zK'].items():
-        for k, info in inst['recycling'].items():
-            if info['name'] == name: cfg['zK'][k] = seq
-    for name, seq in xcfg['zJ'].items():
-        for j, info in inst['sorting'].items():
-            if info['name'] == name: cfg['zJ'][j] = seq
-    for name, seq in xcfg['rL'].items():
-        for l, info in inst['landfill'].items():
-            if info['name'] == name: cfg['rL'][l] = seq
-    return sol.objective_value, cfg, time.time()-t0
+    return sol.objective_value, _cfg_from_xconfig(inst, xcfg), time.time()-t0
 
 # ================= E3 =================
 def run_main_experiment(n_batches=10, methods=None, n_test=200):
@@ -227,7 +252,7 @@ def run_sensitivity(real_only=True):
             if m == 'DET':
                 obj, cfg, wt = run_method_det(inst)
             else:
-                obj, cfg, wt = run_method_alns(inst, m, train, alns_iters=150)
+                obj, cfg, wt = run_method_alns(inst, m, train, alns_iters=1000)
             costs, probs, unmets, recycs = oos_eval(inst, cfg, gen_scenarios(inst, 100, seed=20260901))
             st = weighted_stats(costs, probs, obj)
             rows.append({'tc': tc, 'rev': rev, 'method': m, 'oos_mean': st['oos_mean'],

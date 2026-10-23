@@ -42,7 +42,10 @@ def gen_scenarios(inst, n_saa, seed=20260825, include_anchor=True):
         sc['prob'] /= tot
     return scenarios
 
-def build_and_solve_saa(inst, scenarios, name='saa', retire_lstar=False, t_star=2, log=False, fixed_unit=1e4):
+def build_and_solve_saa(inst, scenarios, name='saa', retire_lstar=False, t_star=2, log=False, fixed_unit=1e4,
+                        require_cover=False, time_limit=300):
+    """两阶段 SAA 求解。require_cover=True 时加入服务级覆盖约束（论文式 (14)）：
+    每个情景的未满足量为零。这使 CPLEX 与 ALNS 求解同一个优化问题。"""
     T = inst['meta']['periods']
     GEN = list(inst['demand']); SORT = list(inst['sorting']); RECY = list(inst['recycling']); LAND = list(inst['landfill'])
     P = inst['params']; rho = P['recyclable_ratio']; phi = P.get('product_yield', 1.0)
@@ -96,8 +99,8 @@ def build_and_solve_saa(inst, scenarios, name='saa', retire_lstar=False, t_star=
                 prev = s[j, t-1, sn] if t > 1 else 0
                 out_t = mdl.sum(w[j, k, t, sn] for k in RECY) + mdl.sum(q[j, l, t, sn] for l in LAND)
                 mdl.add_constraint(prev + mdl.sum(y[i, j, t, sn] for i in GEN) == out_t + s[j, t, sn], ctname=f'C2_{j}_{t}_{sn}')
-                mdl.add_constraint(mdl.sum(w[j, k, t, sn] for k in RECY) <= rho*out_t, ctname=f'C2rho1_{j}_{t}_{sn}')
-                mdl.add_constraint(mdl.sum(q[j, l, t, sn] for l in LAND) >= (1-rho)*out_t, ctname=f'C2rho2_{j}_{t}_{sn}')
+                # 式 (3) 等式分流：Σw = ρ·out（V2.1：与论文一致，替换原不等式对）
+                mdl.add_constraint(mdl.sum(w[j, k, t, sn] for k in RECY) == rho*out_t, ctname=f'C2rho_{j}_{t}_{sn}')
         for k in RECY:
             for t in range(1, T+1):
                 mdl.add_constraint((1-phi)*mdl.sum(w[j, k, t, sn] for j in SORT) == mdl.sum(v[k, l, t, sn] for l in LAND), ctname=f'C3_{k}_{t}_{sn}')
@@ -123,6 +126,9 @@ def build_and_solve_saa(inst, scenarios, name='saa', retire_lstar=False, t_star=
         for j in SORT:
             for t in range(1, T+1):
                 mdl.add_constraint(s[j, t, sn] <= inst['sorting'][j]['buffer_cap_t']*xJ[j, t] + inst['sorting'][j].get('expand_step_t', 30e4)*0.2*zJ[j, t], ctname=f'C10_{j}_{t}_{sn}')
+        if require_cover:
+            # 服务级覆盖约束（论文式 (14)）：该情景零未满足
+            mdl.add_constraint(mdl.sum(u[i, t, sn] for i in GEN for t in range(1, T+1)) <= 1e-6, ctname=f'C14_{sn}')
 
     for l in LAND:
         for t in range(1, T):
@@ -141,7 +147,7 @@ def build_and_solve_saa(inst, scenarios, name='saa', retire_lstar=False, t_star=
         for t in range(1, T):
             mdl.add_constraint(zJ[j, t] <= zJ[j, t+1], ctname=f'C9J_{j}_{t}')
 
-    mdl.set_time_limit(300)  # 5min cap per instance
+    mdl.set_time_limit(time_limit)  # 5min cap per instance
     sol = mdl.solve(log_output=log)
     return mdl, sol, dict(xJ=xJ, xK=xK, xL=xL, zK=zK, zJ=zJ, rL=rL, y=y, yd=yd, w=w, q=q, v=v, s=s, u=u)
 

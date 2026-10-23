@@ -26,6 +26,8 @@ def build_and_solve(inst, name='d0', retire_lstar=False, t_star=2, log=False, fi
     xK = mdl.binary_var_dict([(k, t) for k in RECY for t in range(1, T+1)], name='xK')
     xL = mdl.binary_var_dict([(l, t) for l in LAND for t in range(1, T+1)], name='xL')
     zK = mdl.integer_var_dict([(k, t) for k in RECY for t in range(1, T+1)], lb=0, ub=4, name='zK')
+    # V2.1：分拣扩容档（论文式 (5)/(11)/(12)）——此前 D0 缺失 zJ，与正文不一致
+    zJ = mdl.integer_var_dict([(j, t) for j in SORT for t in range(1, T+1)], lb=0, ub=4, name='zJ')
     rL = mdl.binary_var_dict([(l, t) for l in LAND for t in range(1, T+1)], name='rL')
     y = mdl.continuous_var_dict([(i, j, t) for i in GEN for j in SORT for t in range(1, T+1)], lb=0, name='y')
     yd = mdl.continuous_var_dict([(i, l, t) for i in GEN for l in LAND for t in range(1, T+1)], lb=0, name='yd')  # 直达消纳（工程渣土等免分拣部分）
@@ -37,7 +39,8 @@ def build_and_solve(inst, name='d0', retire_lstar=False, t_star=2, log=False, fi
 
     # ---- 目标函数（规范 §5）----
     FIXED_UNIT = fixed_unit  # 实例固定成本单位换算（真实实例万元→元；tiny已为一致单位传1）
-    fixed = mdl.sum(inst['sorting'][j]['open_fixed']*FIXED_UNIT*xJ[j, t] for j in SORT for t in range(1, T+1)) \
+    fixed = mdl.sum((inst['sorting'][j]['open_fixed']*FIXED_UNIT*xJ[j, t]
+                     + inst['sorting'][j].get('expand_cost', 600.0)*FIXED_UNIT*zJ[j, t]) for j in SORT for t in range(1, T+1)) \
           + mdl.sum((inst['recycling'][k]['open_fixed']*FIXED_UNIT*xK[k, t] + inst['recycling'][k]['expand_cost']*FIXED_UNIT*zK[k, t]) for k in RECY for t in range(1, T+1)) \
           + mdl.sum(inst['landfill'][l]['open_fixed']*FIXED_UNIT*xL[l, t] for l in LAND for t in range(1, T+1))
     trans = mdl.sum(P['transport_cost'] * (
@@ -67,17 +70,17 @@ def build_and_solve(inst, name='d0', retire_lstar=False, t_star=2, log=False, fi
             prev = s[j, t-1] if t > 1 else 0
             out_t = mdl.sum(w[j, k, t] for k in RECY) + mdl.sum(q[j, l, t] for l in LAND)
             mdl.add_constraint(prev + mdl.sum(y[i, j, t] for i in GEN) == out_t + s[j, t], ctname=f'C2_{j}_{t}')
-            # R2 资源化比例：进资源化厂 ρ、进消纳 1-ρ
-            mdl.add_constraint(mdl.sum(w[j, k, t] for k in RECY) <= rho*out_t, ctname=f'C2rho1_{j}_{t}')
-            mdl.add_constraint(mdl.sum(q[j, l, t] for l in LAND) >= (1-rho)*out_t, ctname=f'C2rho2_{j}_{t}')
+            # R2 资源化比例（等式，V2.1 与论文式(3)一致）：进资源化厂 ρ、进消纳 1-ρ
+            mdl.add_constraint(mdl.sum(w[j, k, t] for k in RECY) == rho*out_t, ctname=f'C2rho_{j}_{t}')
     # C3 资源化厂流量平衡
     for k in RECY:
         for t in range(1, T+1):
             mdl.add_constraint((1-phi)*mdl.sum(w[j, k, t] for j in SORT) == mdl.sum(v[k, l, t] for l in LAND), ctname=f'C3_{k}_{t}')
-    # C4 分拣能力
+    # C4 分拣能力（含模块化扩容，论文式 (5)）
     for j in SORT:
         for t in range(1, T+1):
-            mdl.add_constraint(mdl.sum(y[i, j, t] for i in GEN) <= inst['sorting'][j]['cap_t']*xJ[j, t], ctname=f'C4_{j}_{t}')
+            mdl.add_constraint(zJ[j, t] <= 4*xJ[j, t], ctname=f'C4z_{j}_{t}')
+            mdl.add_constraint(mdl.sum(y[i, j, t] for i in GEN) <= inst['sorting'][j]['cap_t']*xJ[j, t] + inst['sorting'][j].get('expand_step_t', 30e4)*zJ[j, t], ctname=f'C4_{j}_{t}')
     # C5 资源化能力（含扩容与最小经济开工量；zK≤ub·xK 使 zK·xK 双线性消去）
     for k in RECY:
         for t in range(1, T+1):
@@ -107,24 +110,28 @@ def build_and_solve(inst, name='d0', retire_lstar=False, t_star=2, log=False, fi
             if inst['landfill'][l]['retire_candidate']:
                 for t in range(t_star, T+1):
                     mdl.add_constraint(rL[l, t] == 1, ctname=f'C8_{l}_{t}')
-    # C9 扩容单调
+    # C9 扩容单调（分拣与厂，论文式 (11)）
     for k in RECY:
         for t in range(1, T):
             mdl.add_constraint(zK[k, t] <= zK[k, t+1], ctname=f'C9_{k}_{t}')
-    # C10 库存容量
+    for j in SORT:
+        for t in range(1, T):
+            mdl.add_constraint(zJ[j, t] <= zJ[j, t+1], ctname=f'C9J_{j}_{t}')
+    # C10 库存容量（含扩容带来的缓冲增量，论文式 (12)）
     for j in SORT:
         for t in range(1, T+1):
-            mdl.add_constraint(s[j, t] <= inst['sorting'][j]['buffer_cap_t']*xJ[j, t], ctname=f'C10_{j}_{t}')
+            mdl.add_constraint(s[j, t] <= inst['sorting'][j]['buffer_cap_t']*xJ[j, t] + inst['sorting'][j].get('expand_step_t', 30e4)*0.2*zJ[j, t], ctname=f'C10_{j}_{t}')
 
     sol = mdl.solve(log_output=log)
-    return mdl, sol, dict(xJ=xJ, xK=xK, xL=xL, zK=zK, rL=rL, y=y, yd=yd, w=w, q=q, v=v, s=s, u=u)
+    return mdl, sol, dict(xJ=xJ, xK=xK, xL=xL, zK=zK, zJ=zJ, rL=rL, y=y, yd=yd, w=w, q=q, v=v, s=s, u=u)
 
 # ================= V1: 手算小实例 =================
 def tiny_instance(revenue=0.0):
     return {
         'meta': {'periods': 1, 'name': 'tiny-2-1-1-1'},
         'demand': {'i1': {'d': {'1': 100.0}}, 'i2': {'d': {'1': 50.0}}},
-        'sorting': {'j1': {'open_fixed': 10.0, 'op_cost': 1.0, 'cap_t': 1e9, 'buffer_cap_t': 1e-6}},  # 禁缓冲免费处置
+        'sorting': {'j1': {'open_fixed': 10.0, 'op_cost': 1.0, 'cap_t': 1e9, 'buffer_cap_t': 1e-6,
+                           'expand_step_t': 0.0, 'expand_cost': 0.0}},  # 禁缓冲、无分拣扩容（模块增量为0）
         'recycling': {'k1': {'open_fixed': 20.0, 'op_cost': 2.0, 'cap_t': 1e9,
                              'expand_step_t': 1e9, 'expand_cost': 5.0, 'min_run_t': 0.0}},
         'landfill': {'l1': {'open_fixed': 30.0, 'op_cost': 3.0, 'cap_t': 1e9, 'retire_candidate': False}},

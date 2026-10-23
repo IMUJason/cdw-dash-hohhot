@@ -56,7 +56,7 @@ for pen in [100.0, 250.0, 500.0, 1000.0]:
         if m == 'DET':
             obj, cfg, wt = run_method_det(inst)
         else:
-            obj, cfg, wt = run_method_alns(inst, m, train, alns_iters=150)
+            obj, cfg, wt = run_method_alns(inst, m, train, alns_iters=1000)
         costs, probs, unmets, recycs = oos_eval(inst, cfg, test)
         st = weighted_stats(costs, probs, obj, unmets, recycs, budget=None)
         # 无惩罚口径成本（把 u 的惩罚项剥离）：oos_nopen = oos_mean - (pen-10)*E[u] 近似（u的运营按填埋计）

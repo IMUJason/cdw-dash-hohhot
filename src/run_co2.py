@@ -68,8 +68,8 @@ def solve_tkm(inst, xcfg, d_scenario):
             prev = [(('s', j, t-1), 1.0)] if t > 1 else []
             eqrow(prev + [(('y', i, j, t), 1.0) for i in GEN] + [(('w', j, k, t), -1.0) for k in RECY] + [(('q', j, l, t), -1.0) for l in LAND] + [(('s', j, t), -1.0)], 0.0)
             outs = [(('w', j, k, t), 1.0) for k in RECY]; qs = [(('q', j, l, t), 1.0) for l in LAND]
-            ubrow([(x, (1-rho)*cv) for x, cv in outs] + [(x, -rho*cv) for x, cv in qs], 0.0)
-            ubrow([(x, (1-rho)*cv) for x, cv in outs] + [(x, -rho*cv) for x, cv in qs], 0.0)
+            # 式 (3) 等式分流（V2.1）
+            eqrow([(x, (1-rho)*cv) for x, cv in outs] + [(x, -rho*cv) for x, cv in qs], 0.0)
     for k in RECY:
         for t in range(1, T+1):
             eqrow([(('w', j, k, t), (1-phi)) for j in SORT] + [(('v', k, l, t), -1.0) for l in LAND], 0.0)

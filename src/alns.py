@@ -113,7 +113,8 @@ def solve_second_stage_lp_ex(inst, xcfg, d_scenario, require_cover=False):
             ubrow([(('s', j, t), 1.0)], (inst['sorting'][j]['buffer_cap_t'] + step_j*zj_t[t-1]*0.2)*xcfg['xJ'][j][t-1])
     for k in RECY:
         for t in range(1, T+1):
-            cap = inst['recycling'][k]['cap_t']*xcfg['xK'][k][t-1] + inst['recycling'][k]['expand_step_t']*xcfg['zK'][k][t-1]
+            # 与 CPLEX C5a∧C5z 同构：关闭的厂不获得任何容量（zK 只在 xK=1 时计容量）
+            cap = (inst['recycling'][k]['cap_t'] + inst['recycling'][k]['expand_step_t']*xcfg['zK'][k][t-1]) * xcfg['xK'][k][t-1]
             ubrow([(('w', j, k, t), 1.0) for j in SORT], cap)
             if xcfg['xK'][k][t-1] == 1:
                 r = np.zeros(n)
@@ -422,7 +423,7 @@ def cover_preserving_descent(inst, scen, cfg0=None, FU=1e4, max_rounds=8, verbos
     return best_cfg, best_cost
 
 def alns(inst, scenarios, max_iter=1000, seed=20260825, verbose=True, FU=1e4,
-         report_scen=None, obj_fn=None, require_cover=True):
+         report_scen=None, obj_fn=None, require_cover=True, max_time=None):
     """混合 ALNS。搜索在 scenarios（缩减集 S'）上进行；report_scen（默认=S'）
     用于返回前对候选池的精确重评估与最终选择（论文 Algorithm 1）。
 
@@ -499,6 +500,10 @@ def alns(inst, scenarios, max_iter=1000, seed=20260825, verbose=True, FU=1e4,
     t0 = time.time()
     history = []
     for it in range(max_iter):
+        if max_time is not None and time.time() - t0 > max_time:
+            if verbose:
+                print(f'[alns] wall budget {max_time:.0f}s reached at iter {it}', flush=True)
+            break  # 墙钟预算：与 CPLEX 统一 TL 的大实例协议
         # softmax 选择算子
         ws = [weights[o] for o in ops]
         mx = max(ws)
@@ -543,7 +548,8 @@ def alns(inst, scenarios, max_iter=1000, seed=20260825, verbose=True, FU=1e4,
                 delta = rng.choice([-1, 1])
                 for tt in range(t, Tn+1):
                     cand['zJ'][j][tt-1] = max(0, min(4, cand['zJ'][j][tt-1] + delta))
-        elif op == 'D6_greedy_close' and it % 20 == 0:
+        elif op == 'D6_greedy_close' and it % 20 == 0 and cur_t is not None:
+            # cur_t 为 None 说明当前 incumbent 尚无覆盖可行评估（如 ε 超过物理上限），跳过 D6
             base_v = cur_t[0]
             best_delta, best_e, best_mode = 0, None, None
             for e in inst['recycling']:

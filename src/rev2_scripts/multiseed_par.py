@@ -9,7 +9,7 @@ D = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, D); os.chdir(D)
 
 BASE = json.load(open(f'{D}/instance_v1.json', encoding='utf-8'))
-METHODS = ['SAA', 'DRO(0.05)', 'DRO(0.10)', 'DRO(0.20)']
+METHODS = ['SAA', 'DRO(0.05)', 'DRO(0.10)', 'DRO(0.18)']  # 0.20 超物理上限 ε*≈0.185（修 bug 后 ALNS 找不到覆盖可行解，会崩溃）
 ITERS = int(os.environ.get('ALNS_ITERS', '1000'))
 NSEEDS = int(os.environ.get('NSEEDS', '10'))
 EXP = f'{D}/experiments'

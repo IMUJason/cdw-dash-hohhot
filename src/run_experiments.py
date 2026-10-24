@@ -171,7 +171,7 @@ def run_method_exact(inst, method, train_scen, time_limit=900, require_cover=Tru
     return sol.objective_value, _cfg_from_xconfig(inst, xcfg), el
 
 
-def run_method_alns(inst, method, train_scen, alns_iters=1000, alns_seed=42, obj_fn=None):
+def run_method_alns(inst, method, train_scen, alns_iters=1000, alns_seed=42, obj_fn=None, alns_max_time=None):
     """返回 (plan_obj_on_full_train, cfg, walltime, alns_gap_vs_saa?)
     V2.2：迭代预算 1000；内层 LP 施加服务级覆盖约束（与 CPLEX 同解一个问题）；
     候选池在 full（完整训练情景集）上精确重评估后返回真最优（论文 Algorithm 1）。"""
@@ -188,7 +188,7 @@ def run_method_alns(inst, method, train_scen, alns_iters=1000, alns_seed=42, obj
     # 情景缩减搜索 + 候选池在全集上重评估
     search_scen = reduce_scenarios(inst, full, k=12, seed=7) if len(full) > 12 else full
     best, plan_obj, _, _ = alns(inst, search_scen, max_iter=alns_iters, seed=alns_seed,
-                                verbose=False, report_scen=full, obj_fn=obj_fn)
+                                verbose=False, report_scen=full, obj_fn=obj_fn, max_time=alns_max_time)
     return plan_obj, best, time.time()-t0
 
 def run_method_det(inst, time_limit=900):

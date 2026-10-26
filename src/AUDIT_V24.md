@@ -52,6 +52,12 @@
 - 修复：`repair_monotone` 统一夹紧 0≤z≤4；新增 `config_violations`；验证脚本全部经有效性门禁。
 - 任何负 gap 一律视为 bug，不作为算法优势报告。
 
+## 3.5 参照最优的证书强度
+- 默认 MIP 相对容差 1e-4 对 gap 比较太松。`cplex_saa.build_and_solve_saa` 新增 `mip_gap` 参数。
+- `results_gri_small_cplex_tight.csv`：11 实例在 mip_gap=1e-9 下全部求得 **MIP gap = 0.0**（已证明最优），单实例 20–43s。
+- 目标值与 1e-4 容差版完全一致，说明原参照已经最优；现在证书更强。
+- 因此 GRI 的 gap 是对**已证明最优**的精确算术差，不是对近似解的估计。
+
 ## 4. 当前验证门栅
 
 - `rev2_scripts/gri_small_driver.py`：11 实例 × 5 种子。

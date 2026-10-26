@@ -77,15 +77,35 @@ def solve_second_stage_lp_ex(inst, xcfg, d_scenario, require_cover=False):
         elif key == 's': c[var] = P['hold_cost']
         elif key == 'u': c[var] = P['unmet_penalty']
 
-    A_eq, b_eq, A_ub, b_ub = [], [], [], []
+    # 稀疏组装：只存非零三元组（稠密矩阵在 m>=4 时每情景 >100MB，是瓶颈）
+    from scipy.sparse import coo_matrix
+    eq_trip, ub_trip = [], []      # (row, col, val)
+    b_eq, b_ub = [], []
+
+    def _push(trip, coeffs, ridx):
+        acc = {}
+        for k_, cval in coeffs:
+            col = idx[k_]
+            acc[col] = acc.get(col, 0.0) + cval
+        for col, val in acc.items():
+            trip.append((ridx, col, val))
+
     def eqrow(coeffs, rhs):
-        r = np.zeros(n)
-        for k_, cval in coeffs: r[idx[k_]] += cval
-        A_eq.append(r); b_eq.append(rhs)
+        _push(eq_trip, coeffs, len(b_eq))
+        b_eq.append(rhs)
+
     def ubrow(coeffs, rhs):
-        r = np.zeros(n)
-        for k_, cval in coeffs: r[idx[k_]] += cval
-        A_ub.append(r); b_ub.append(rhs)
+        _push(ub_trip, coeffs, len(b_ub))
+        b_ub.append(rhs)
+
+
+    def _assemble(trip, nrow):
+        if not trip:
+            return None
+        rr = np.fromiter((t[0] for t in trip), dtype=np.int32, count=len(trip))
+        cc = np.fromiter((t[1] for t in trip), dtype=np.int32, count=len(trip))
+        vv = np.fromiter((t[2] for t in trip), dtype=np.float64, count=len(trip))
+        return coo_matrix((vv, (rr, cc)), shape=(nrow, n)).tocsr()
 
     for i in GEN:
         for t in range(1, T+1):
@@ -117,9 +137,8 @@ def solve_second_stage_lp_ex(inst, xcfg, d_scenario, require_cover=False):
             cap = (inst['recycling'][k]['cap_t'] + inst['recycling'][k]['expand_step_t']*xcfg['zK'][k][t-1]) * xcfg['xK'][k][t-1]
             ubrow([(('w', j, k, t), 1.0) for j in SORT], cap)
             if xcfg['xK'][k][t-1] == 1:
-                r = np.zeros(n)
-                for j in SORT: r[idx[('w', j, k, t)]] -= 1.0
-                A_ub.append(r); b_ub.append(-inst['recycling'][k]['min_run_t'])
+                ubrow([(('w', j, k, t), -1.0) for j in SORT],
+                      -inst['recycling'][k]['min_run_t'])
     for l in LAND:
         for t in range(1, T+1):
             used = xcfg['xL'][l][t-1] and xcfg['rL'][l][t-1] == 0
@@ -141,8 +160,12 @@ def solve_second_stage_lp_ex(inst, xcfg, d_scenario, require_cover=False):
     for j in SORT:
         eqrow([(('s', j, T), 1.0)], 0.0)
 
-    res = linprog(c, A_ub=np.array(A_ub) if A_ub else None, b_ub=np.array(b_ub) if b_ub else None,
-                  A_eq=np.array(A_eq), b_eq=np.array(b_eq), bounds=(0, None), method='highs')
+    A_eq_sp = _assemble(eq_trip, len(b_eq))
+    A_ub_sp = _assemble(ub_trip, len(b_ub))
+    res = linprog(c,
+                  A_ub=A_ub_sp, b_ub=np.array(b_ub) if b_ub else None,
+                  A_eq=A_eq_sp, b_eq=np.array(b_eq) if b_eq else None,
+                  bounds=(0, None), method='highs')
     if res.status != 0:
         return None, None, None
     x = res.x

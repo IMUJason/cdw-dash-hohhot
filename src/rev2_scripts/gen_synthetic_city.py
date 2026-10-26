@@ -22,7 +22,7 @@ BASE = json.load(open(f'{D}/instance_v1.json', encoding='utf-8'))
 OUT = f'{D}/experiments/synth_instances'
 os.makedirs(OUT, exist_ok=True)
 
-def gen_city(m, seed):
+def gen_city(m, seed, hetero=False):
     """m = 复制倍数（1=真实网）；seed 控制扰动。"""
     rng = np.random.default_rng(seed)
     inst = {'meta': {'name': f'synth-city-m{m}-s{seed}', 'periods': 3,
@@ -54,13 +54,21 @@ def gen_city(m, seed):
                 nm = f'{nm0}_c{c}'
                 f = dict(info0)
                 f['name'] = nm
-                f['cap_t'] = info0['cap_t'] * float(rng.uniform(0.8, 1.25))
+                if hetero:
+                    # 异构放大：容量跨 2 倍量级，模拟真实城市的设施规模差异
+                    f['cap_t'] = info0['cap_t'] * float(rng.uniform(0.45, 2.1))
+                else:
+                    f['cap_t'] = info0['cap_t'] * float(rng.uniform(0.8, 1.25))
                 if 'load2025_t' in info0:
                     f['load2025_t'] = info0['load2025_t'] * float(rng.uniform(0.8, 1.2))
                 if 'buffer_cap_t' in info0:
                     f['buffer_cap_t'] = info0['buffer_cap_t'] * float(rng.uniform(0.8, 1.25))
-                f['open_fixed'] = info0['open_fixed'] * float(rng.uniform(0.9, 1.1))
-                f['op_cost'] = info0['op_cost'] * float(rng.uniform(0.85, 1.15))
+                if hetero:
+                    f['open_fixed'] = info0['open_fixed'] * float(rng.uniform(0.7, 1.5))
+                    f['op_cost'] = info0['op_cost'] * float(rng.uniform(0.7, 1.45))
+                else:
+                    f['open_fixed'] = info0['open_fixed'] * float(rng.uniform(0.9, 1.1))
+                    f['op_cost'] = info0['op_cost'] * float(rng.uniform(0.85, 1.15))
                 if kind == 'landfill':
                     # 每克隆组的 c==0 继承 retire_candidate（保真实退出结构）
                     f['retire_candidate'] = bool(info0.get('retire_candidate', False)) and c == 0
@@ -84,13 +92,18 @@ def gen_city(m, seed):
                 for v0 in vs:
                     for vc in range(m):
                         v = f'{v0}_c{vc}'
-                        out[u][v] = float(src[u0][v0] * np.exp(rng.normal(0, 0.15)))
+                        sd = 0.32 if hetero else 0.15
+                        out[u][v] = float(src[u0][v0] * np.exp(rng.normal(0, sd)))
         inst['dist'][arc] = out
     return inst
 
 def n_discrete(inst):
     T = 3
     return (len(inst['sorting']) + len(inst['recycling']) + len(inst['landfill'])) * T * 2
+
+def gen_hetero(m, seed):
+    return gen_city(m, seed, hetero=True)
+
 
 if __name__ == '__main__':
     SPECS = []  # (m, seed) —— 与论文表 4 对应的规模阶梯

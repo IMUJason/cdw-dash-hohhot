@@ -43,7 +43,7 @@ def gen_scenarios(inst, n_saa, seed=20260825, include_anchor=True):
     return scenarios
 
 def build_and_solve_saa(inst, scenarios, name='saa', retire_lstar=False, t_star=2, log=False, fixed_unit=1e4,
-                        require_cover=False, time_limit=300):
+                        require_cover=False, time_limit=300, mip_gap=None):
     """两阶段 SAA 求解。require_cover=True 时加入服务级覆盖约束（论文式 (14)）：
     每个情景的未满足量为零。这使 CPLEX 与 ALNS 求解同一个优化问题。"""
     T = inst['meta']['periods']
@@ -151,6 +151,10 @@ def build_and_solve_saa(inst, scenarios, name='saa', retire_lstar=False, t_star=
             mdl.add_constraint(zJ[j, t] <= zJ[j, t+1], ctname=f'C9J_{j}_{t}')
 
     mdl.set_time_limit(time_limit)  # 5min cap per instance
+    if mip_gap is not None:
+        # 精确参照：收缩 MIP 相对容差（默认 1e-4，对 gap 比较而言太松）
+        mdl.parameters.mip.tolerances.mipgap = float(mip_gap)
+        mdl.parameters.mip.tolerances.absmipgap = 0.0
     sol = mdl.solve(log_output=log)
     return mdl, sol, dict(xJ=xJ, xK=xK, xL=xL, zK=zK, zJ=zJ, rL=rL, y=y, yd=yd, w=w, q=q, v=v, s=s, u=u)
 

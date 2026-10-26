@@ -78,10 +78,10 @@ def solve_tkm(inst, xcfg, d_scenario):
         zj_t = zJ_cfg.get(j, [0]*T)
         for t in range(1, T+1):
             ubrow([(('y', i, j, t), 1.0) for i in GEN], (inst['sorting'][j]['cap_t'] + inst['sorting'][j].get('expand_step_t', 1e5)*zj_t[t-1])*xcfg['xJ'][j][t-1])
-            ubrow([(('s', j, t), 1.0)], inst['sorting'][j]['buffer_cap_t'] + inst['sorting'][j].get('expand_step_t', 1e5)*zj_t[t-1]*0.2)
+            ubrow([(('s', j, t), 1.0)], (inst['sorting'][j]['buffer_cap_t'] + inst['sorting'][j].get('expand_step_t', 1e5)*zj_t[t-1]*0.2)*xcfg['xJ'][j][t-1])
     for k in RECY:
         for t in range(1, T+1):
-            ubrow([(('w', j, k, t), 1.0) for j in SORT], inst['recycling'][k]['cap_t']*xcfg['xK'][k][t-1] + inst['recycling'][k]['expand_step_t']*xcfg['zK'][k][t-1])
+            ubrow([(('w', j, k, t), 1.0) for j in SORT], (inst['recycling'][k]['cap_t'] + inst['recycling'][k]['expand_step_t']*xcfg['zK'][k][t-1])*xcfg['xK'][k][t-1])
             if xcfg['xK'][k][t-1] == 1:
                 r = np.zeros(n)
                 for j in SORT: r[idx[('w', j, k, t)]] -= 1.0
@@ -99,6 +99,9 @@ def solve_tkm(inst, xcfg, d_scenario):
         for k in RECY:
             for t in range(1, T+1): cum.append((('v', k, l, t), 1.0))
         ubrow(cum, inst['landfill'][l]['cap_t'])
+    # 终端清空（V2.4）
+    for j in SORT:
+        eqrow([(('s', j, T), 1.0)], 0.0)
     res = linprog(c, A_ub=np.array(A_ub), b_ub=np.array(b_ub), A_eq=np.array(A_eq), b_eq=np.array(b_eq), bounds=(0, None), method='highs')
     if res.status != 0:
         return None

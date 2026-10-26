@@ -121,6 +121,9 @@ def build_and_solve(inst, name='d0', retire_lstar=False, t_star=2, log=False, fi
     for j in SORT:
         for t in range(1, T+1):
             mdl.add_constraint(s[j, t] <= inst['sorting'][j]['buffer_cap_t']*xJ[j, t] + inst['sorting'][j].get('expand_step_t', 30e4)*0.2*zJ[j, t], ctname=f'C10_{j}_{t}')
+    # 终端清空（V2.4）：期末缓冲不得停放材料
+    for j in SORT:
+        mdl.add_constraint(s[j, T] == 0, ctname=f'C10t_{j}')
 
     sol = mdl.solve(log_output=log)
     return mdl, sol, dict(xJ=xJ, xK=xK, xL=xL, zK=zK, zJ=zJ, rL=rL, y=y, yd=yd, w=w, q=q, v=v, s=s, u=u)

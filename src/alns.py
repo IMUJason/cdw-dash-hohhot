@@ -137,6 +137,9 @@ def solve_second_stage_lp_ex(inst, xcfg, d_scenario, require_cover=False):
     if require_cover:
         # 服务级覆盖约束（论文式 (14)）：该情景零未满足
         eqrow([(('u', i, t), 1.0) for i in GEN for t in range(1, T+1)], 0.0)
+    # 终端清空（V2.4）：期末缓冲不得停放材料
+    for j in SORT:
+        eqrow([(('s', j, T), 1.0)], 0.0)
 
     res = linprog(c, A_ub=np.array(A_ub) if A_ub else None, b_ub=np.array(b_ub) if b_ub else None,
                   A_eq=np.array(A_eq), b_eq=np.array(b_eq), bounds=(0, None), method='highs')
@@ -600,7 +603,11 @@ def alns(inst, scenarios, max_iter=1000, seed=20260825, verbose=True, FU=1e4,
     # 且其计划值与 CPLEX 的目标值同口径（可直接比较 gap）。
     best_key, best_pick, best_rank = None, None, None
     fallback_key, fallback_pick, fallback_rank = None, None, None
-    for k, (cfg, _) in pool.items():
+    deadline = (t0 + max_time) if max_time is not None else None
+    # 池成员按搜索期值升序评估：预算内优先验证最有希望的候选（大实例协议）
+    for k, (cfg, _) in sorted(pool.items(), key=lambda kv: kv[1][1] if kv[1][1] is not None else float('inf')):
+        if deadline is not None and time.time() > deadline:
+            break
         t = _eval(cfg, rs, cover=True)          # 同口径：覆盖可行且成本最小
         if t is not None:
             r = _rank(t)
@@ -621,7 +628,7 @@ def alns(inst, scenarios, max_iter=1000, seed=20260825, verbose=True, FU=1e4,
     # V2.2 确定性精化：覆盖保持的贪心下降（在完整报告集上）。
     # 随机算子负责跳出局部最优；本阶段负责把覆盖解的成本压到局部最优，
     # 从而消除种子间方差（V2.1 观测到的 ±0.12B 方差来源）。
-    if require_cover:
+    if require_cover and (deadline is None or time.time() < deadline):
         # 从两个起点分别下降，取更优者：满配解（必定覆盖）与池中最优解
         starts = [best]
         for st_name, st_cfg in [('pool', pool[best_key][0] if best_key else None),

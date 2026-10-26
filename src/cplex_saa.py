@@ -129,6 +129,9 @@ def build_and_solve_saa(inst, scenarios, name='saa', retire_lstar=False, t_star=
         if require_cover:
             # 服务级覆盖约束（论文式 (14)）：该情景零未满足
             mdl.add_constraint(mdl.sum(u[i, t, sn] for i in GEN for t in range(1, T+1)) <= 1e-6, ctname=f'C14_{sn}')
+        # 终端清空（V2.4）：期末缓冲不得停放材料（否则成为免费处置通道）
+        for j in SORT:
+            mdl.add_constraint(s[j, T, sn] == 0, ctname=f'C10t_{j}_{sn}')
 
     for l in LAND:
         for t in range(1, T):

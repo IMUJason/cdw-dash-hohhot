@@ -1,0 +1,12 @@
+instance,seed,status,time_s,obj,gap
+real,0,"time limit exceeded, no integer solution",128.54797792434692,,
+batch1,1,integer infeasible,126.07700085639954,,
+batch2,2,"time limit exceeded, no integer solution",128.35415077209473,,
+batch3,3,"time limit exceeded, no integer solution",126.96666693687439,,
+batch4,4,"time limit exceeded, no integer solution",131.00964093208313,,
+batch5,5,"time limit exceeded, no integer solution",128.1530339717865,,
+batch6,6,"time limit exceeded, no integer solution",127.38661098480225,,
+batch7,7,"time limit exceeded, no integer solution",128.23566102981567,,
+batch8,8,"time limit exceeded, no integer solution",128.62649512290955,,
+batch9,9,integer infeasible,126.28247499465942,,
+batch10,10,"time limit exceeded, no integer solution",127.8247709274292,,

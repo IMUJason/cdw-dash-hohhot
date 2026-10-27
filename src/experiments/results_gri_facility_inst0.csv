@@ -1,0 +1,2 @@
+instance,m,n_discrete,n_scen,cplex_time,cplex_obj,cplex_gap,cplex_proved,gri_time,gri_obj,gri_feasible,gri_vs_cplex_pct
+real,1,108,10,2.634387969970703,853903997.648496,9.584460409695895e-05,False,609.6196060180664,855764033.6280236,True,0.21782729494765896

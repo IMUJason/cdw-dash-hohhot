@@ -1,0 +1,2 @@
+instance,m,n_discrete,n_scen,cplex_time,cplex_obj,cplex_gap,cplex_proved,gri_time,gri_obj,gri_feasible,gri_vs_cplex_pct
+city_m2_s1001,2,216,10,485.91696977615356,1559938116.9981687,9.959479157403243e-05,False,802.9734740257263,1633452119.8616319,True,4.712623024106111

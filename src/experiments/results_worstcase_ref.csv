@@ -1,0 +1,4 @@
+method,eps,fixed_cost,dash_mix_obj,pointmass_obj,pointmass_minus_dash,point_scenario,n_lifted_feasible,n_scenarios,reference
+DRO(0.05),0.05,272400000.0,877697127.5143143,1313633943.1749647,435936815.6606504,anchor_2024_wc,60,60,point-mass lower bound on exact Wasserstein worst case
+DRO(0.10),0.1,312400000.0,944882873.5435368,1478776272.1260004,533893398.5824636,anchor_2024_wc,60,60,point-mass lower bound on exact Wasserstein worst case
+DRO(0.16),0.16,374000000.0,1075628092.2873256,1802009469.8561404,726381377.5688148,anchor_2024_wc,60,60,point-mass lower bound on exact Wasserstein worst case

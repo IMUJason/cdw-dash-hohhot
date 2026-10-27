@@ -1,0 +1,2 @@
+case,n_discrete,cplex_time,cplex_obj,cplex_gap,cplex_proved,gri_time,gri_obj,gri_surrogate,gri_polish_evals,gri_vs_cplex_pct
+real,108,1.3937771320343018,853903997.648496,9.584460409695895e-05,False,176.09405326843262,855813756.3410883,subset-lp,38,0.22365028127886433

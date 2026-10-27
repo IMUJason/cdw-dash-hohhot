@@ -1,7 +1,8 @@
 """V2.2 成本×收益网格的最优方法统计：每格中哪个方法最优。"""
+import os
 import pandas as pd
 import numpy as np
-D = '/Users/cjx-ms/Documents/我的坚果云/科研/论文/2026 cdw 0825/hohhot case data/model'
+D = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 df = pd.read_csv(f'{D}/experiments/results_grid_v22.csv')
 ok = df[df.ok]
 piv = ok.pivot_table(index=['tc', 'rev'], columns='method', values='oos_mean')

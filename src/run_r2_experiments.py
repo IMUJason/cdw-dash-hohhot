@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""R2 补充实验（审稿人要求的两组）：
+"""补充实验（两组）：
 A. rho/phi 敏感性 —— 扫 recyclable_ratio x product_yield，检验 lean(SAA) vs robust(DASH 0.10)
    的结论是否稳健，并逐格校验 Assumption 1(i)（净弧成本非负）。
 B. 保守度-收益光谱（DRO 基线消融）—— SAA / 均值-方差(MV) / DASH(eps) / ROB 在同一实例上的
@@ -133,7 +133,7 @@ def stage_B():
         record(f'MV(lambda={lam})', planned, cfg, wt, native=mvobj)
 
     # 3) DASH 各档
-    for m in ['DRO(0.05)', 'DRO(0.10)', 'DRO(0.20)']:
+    for m in ['DRO(0.05)', 'DRO(0.10)', 'DRO(0.16)']:
         native, cfg, wt = run_method_alns(BASE_INST, m, train, alns_iters=ITERS)
         planned, _ = soft_stats(BASE_INST, cfg, train)
         record(m, planned, cfg, wt, native=native)

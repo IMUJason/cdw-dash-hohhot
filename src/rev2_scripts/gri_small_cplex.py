@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """小规模 CPLEX 基线（V2.4 小规模验证，不是全量重跑）。
 real + batch1..10；SAA(10)；覆盖约束；终端清空；TL=900s。
-输出 results_gri_small_cplex.csv + 最优配置 config_gri_small_<i>.json。
+输出 results_gri_small_cplex_tight.csv + 最优配置 config_gri_small_<i>.json。
 """
 import json, sys, os, time
 import pandas as pd
@@ -20,7 +20,7 @@ def job(seed):
     train = reduce_scenarios(inst, gen_scenarios(inst, 30, seed=1000 + seed), k=10, seed=7)
     t0 = time.time()
     mdl, sol, V = build_and_solve_saa(inst, train, f'gri_small_cpx_{seed}', retire_lstar=True,
-                                      t_star=2, log=False, require_cover=True, time_limit=900)
+                                      t_star=2, log=False, require_cover=True, time_limit=1800, mip_gap=1e-9)
     dt = time.time() - t0
     if sol is None:
         return {'seed': seed, 'ok': False, 'time_s': dt}
@@ -37,5 +37,5 @@ if __name__ == '__main__':
             rows.append(r)
             print(f"seed={r['seed']} ok={r['ok']} "
                   f"opt={r.get('opt', float('nan'))/1e6:.1f}M t={r['time_s']:.0f}s", flush=True)
-            pd.DataFrame(rows).to_csv(f'{EXP}/results_gri_small_cplex.csv', index=False)
+            pd.DataFrame(rows).to_csv(f'{EXP}/results_gri_small_cplex_tight.csv', index=False)
     print('done')

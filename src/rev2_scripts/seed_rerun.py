@@ -1,6 +1,7 @@
+import os
 import json, os, sys, copy
 import numpy as np, pandas as pd
-D='/Users/cjx-ms/Documents/我的坚果云/科研/论文/2026 cdw 0825/hohhot case data/model'
+D = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0,D); os.chdir(D)
 from cplex_saa import gen_scenarios
 from run_experiments import run_method_det, run_method_alns, oos_eval, weighted_stats, EXP

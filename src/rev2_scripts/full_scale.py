@@ -1,7 +1,8 @@
 """完整规模实验：3 规模 × 10 实例 × 2 方法 × 2 求解器，统一 1800s 终止协议"""
+import os
 import json, sys, os, time, copy
 import numpy as np, pandas as pd
-D='/Users/cjx-ms/Documents/我的坚果云/科研/论文/2026 cdw 0825/hohhot case data/model'
+D = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0,D); os.chdir(D)
 from docplex.mp.model import Model
 from cplex_saa import gen_scenarios, build_and_solve_saa

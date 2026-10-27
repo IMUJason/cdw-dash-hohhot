@@ -38,7 +38,7 @@ def paired(method_a, method_b, col):
             'W': float(stat), 'p': float(p), 'cliffs_delta': float(cd)}
 
 tests = []
-for m in ['SAA', 'DRO(0.05)', 'DRO(0.10)', 'DRO(0.20)']:
+for m in ['SAA', 'DRO(0.05)', 'DRO(0.10)', 'DRO(0.16)']:
     r = paired(m, 'DET', 'oos_mean')
     if r: tests.append(r)
     r = paired(m, 'DET', 'disappointment_rate')
@@ -57,7 +57,7 @@ for i, t in enumerate(tests):
 w('')
 
 w('## 3. 方差齐性（H2: DRO 的 CV < SAA）\n')
-for m in ['DRO(0.10)', 'DRO(0.20)']:
+for m in ['DRO(0.10)', 'DRO(0.16)']:
     a = batch[batch.method == m].sort_values('instance')['oos_cv'].values
     b = batch[batch.method == 'SAA'].sort_values('instance')['oos_cv'].values
     if len(a) == len(b) and len(a) > 2:
@@ -94,7 +94,7 @@ plt.rcParams.update({'font.size': 11, 'figure.dpi': 150})
 
 # 图1: 方法×oos_mean 箱线图（batch 实例）
 fig, ax = plt.subplots(figsize=(8, 4.5))
-order = ['DET', 'SAA', 'DRO(0.05)', 'DRO(0.10)', 'DRO(0.20)', 'ROB']
+order = ['DET', 'SAA', 'DRO(0.05)', 'DRO(0.10)', 'DRO(0.16)', 'ROB']
 data = [batch[batch.method == m]['oos_mean'].values / 1e9 for m in order]
 bp = ax.boxplot(data, labels=order, patch_artist=True)
 colors = ['#f8d7da', '#fff3cd', '#d1ecf1', '#c3e6cb', '#bee5eb', '#e2d5f0']

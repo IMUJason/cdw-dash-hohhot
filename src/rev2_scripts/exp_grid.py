@@ -141,7 +141,7 @@ if __name__ == '__main__':
     if which in ('ablation', 'all'):
         tasks = [('MV', 0.25, None), ('MV', 0.5, None), ('MV', 1.0, None),
                  ('SAA', None, 'SAA'), ('DASH', None, 'DRO(0.05)'),
-                 ('DASH', None, 'DRO(0.10)'), ('DASH', None, 'DRO(0.18)'),
+                 ('DASH', None, 'DRO(0.10)'), ('DASH', None, 'DRO(0.16)'),
                  ('BLANKET', None, None)]
         with Pool(processes=8) as p:
             rows = p.map(job_ablation, tasks)

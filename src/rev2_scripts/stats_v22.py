@@ -1,14 +1,15 @@
 """V2.2 主表的统计检验：replica 层 Wilcoxon（Holm 校正）+ Cliff's delta。"""
+import os
 import json, sys, os
 import numpy as np, pandas as pd
 from scipy.stats import wilcoxon
-D = '/Users/cjx-ms/Documents/我的坚果云/科研/论文/2026 cdw 0825/hohhot case data/model'
+D = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(D)
 
 df = pd.read_csv(f'{D}/experiments/results_main_v22.csv')
 rep = df[df.instance != 'real']
 real = df[df.instance == 'real'].set_index('method')
-METHODS = ['SAA', 'DRO(0.05)', 'DRO(0.10)', 'DRO(0.18)']
+METHODS = ['SAA', 'DRO(0.05)', 'DRO(0.10)', 'DRO(0.16)']
 
 
 def cliff(rep_x, rep_y):

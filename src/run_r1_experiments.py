@@ -28,7 +28,7 @@ for cap_scale in [0.7, 0.8]:
         obj_det, cfg_det, wt_det = run_method_det(inst)
         budget = obj_det
         cfgs = {'DET': (obj_det, cfg_det, wt_det)}
-        for m in ['SAA', 'DRO(0.05)', 'DRO(0.10)', 'DRO(0.20)', 'ROB']:
+        for m in ['SAA', 'DRO(0.05)', 'DRO(0.10)', 'DRO(0.16)', 'ROB']:
             obj, cfg, wt = run_method_alns(inst, m, train)
             cfgs[m] = (obj, cfg, wt)
         # 构型签名
@@ -84,7 +84,7 @@ for hold in [1, 2, 3]:  # 1=2023, 2=2024, 3=2025
         scen.append({'name': f's{s}', 'prob': 0.5/8, 'd': d})
     test = [{'name': f'actual{hold}', 'prob': 1.0,
              'd': {i: {t: inst['demand'][i]['d'][str(hold)] for t in range(1, 4)} for i in GEN}}]
-    for m in ['DET', 'SAA', 'DRO(0.05)', 'DRO(0.10)', 'DRO(0.20)', 'ROB']:
+    for m in ['DET', 'SAA', 'DRO(0.05)', 'DRO(0.10)', 'DRO(0.16)', 'ROB']:
         if m == 'DET':
             obj, cfg, wt = run_method_det(inst)
         else:

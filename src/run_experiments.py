@@ -205,7 +205,7 @@ def run_method_det(inst, time_limit=900):
 
 # ================= E3 =================
 def run_main_experiment(n_batches=10, methods=None, n_test=200):
-    methods = methods or ['DET', 'SAA', 'DRO(0.05)', 'DRO(0.10)', 'DRO(0.20)', 'ROB']
+    methods = methods or ['DET', 'SAA', 'DRO(0.05)', 'DRO(0.10)', 'DRO(0.16)', 'ROB']
     base = json.load(open(f'{BASE}/instance_v1.json', encoding='utf-8'))
     rows = []
     for seed in [0] + list(range(1, n_batches+1)):
@@ -281,7 +281,7 @@ def run_backtest():
     test = [{'name': 'actual_2025', 'prob': 1.0,
              'd': {i: {t: inst['demand'][i]['d']['3'] for t in range(1, 4)} for i in GEN}}]
     rows = []
-    for m in ['DET', 'SAA', 'DRO(0.05)', 'DRO(0.10)', 'DRO(0.20)', 'ROB']:
+    for m in ['DET', 'SAA', 'DRO(0.05)', 'DRO(0.10)', 'DRO(0.16)', 'ROB']:
         if m == 'DET':
             obj, cfg, wt = run_method_det(inst)
         else:

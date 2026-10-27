@@ -103,7 +103,7 @@ def main():
         native, cfg = run_mv(BASE, train, lam)
         record(f'MV(lambda={lam})', native, cfg, BASE, test, rows)
         print(f"[B] MV({lam}) commit={native/1e9:.3f}B", flush=True)
-    for m in ['DRO(0.05)', 'DRO(0.10)', 'DRO(0.20)']:
+    for m in ['DRO(0.05)', 'DRO(0.10)', 'DRO(0.16)']:
         native, cfg, _ = run_method_alns(BASE, m, train)
         record(m, native, cfg, BASE, test, rows)
         print(f"[B] {m} commit={native/1e9:.3f}B", flush=True)

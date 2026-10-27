@@ -11,7 +11,7 @@ from multiprocessing import Pool
 D = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, D); os.chdir(D)
 EXP = f'{D}/experiments'
-METHODS = ['DET', 'SAA', 'DRO(0.05)', 'DRO(0.10)', 'DRO(0.18)']
+METHODS = ['DET', 'SAA', 'DRO(0.05)', 'DRO(0.10)', 'DRO(0.16)']
 TL = int(os.environ.get('TL', '900'))
 
 

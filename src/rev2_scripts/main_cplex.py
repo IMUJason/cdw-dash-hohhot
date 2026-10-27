@@ -1,7 +1,7 @@
 """主实验（V2.2）：CPLEX 精确解，10 replica + real 实例，200 共享测试情景。
 
-方法：DET（均值规划，不承诺覆盖）/ SAA / DASH(0.05, 0.10, 0.18)
-DASH(0.18) 替换原 DASH(0.20)：后者在呼和浩特消纳能力下物理不可行（见 V22_DECISION.md）。
+方法：DET（均值规划，不承诺覆盖）/ SAA / DASH(0.05, 0.10, 0.16)
+DASH(0.16) 为 V2.4 终端清空修复后的最高可行档（0.18 全实例不可行，见 AUDIT_V24.md）。
 
 输出：
   experiments/results_main_v22.csv       主表
@@ -14,7 +14,7 @@ from multiprocessing import Pool
 D = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, D); os.chdir(D)
 EXP = f'{D}/experiments'
-METHODS = ['DET', 'SAA', 'DRO(0.05)', 'DRO(0.10)', 'DRO(0.18)']
+METHODS = ['DET', 'SAA', 'DRO(0.05)', 'DRO(0.10)', 'DRO(0.16)']
 
 
 def job(arg):

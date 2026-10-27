@@ -30,16 +30,17 @@ def log(name, ok, detail):
     results.append((name, ok, detail))
     print(f"[{'PASS' if ok else 'FAIL'}] {name}: {detail}", flush=True)
 
-# ---------- 均值情景 ----------
-d_mean = {i: {t: float(np.mean([inst['demand'][i]['d'][str(y)] for y in (1,2,3)]))
-              for t in range(1, T+1)} for i in GEN}
-mean_sc = [{'name': 'mean', 'prob': 1.0, 'd': d_mean}]
+# ---------- V1 用的单情景：与 run_method_det 相同的官方三年轨迹 ----------
+# 不是把三个年份再平均成一年；D0 的每期需求分别对应 2023/2024/2025。
+traj_sc = [{'name': 'traj', 'prob': 1.0,
+            'd': {i: {t: inst['demand'][i]['d'][str(t)] for t in range(1, T+1)}
+                  for i in GEN}}]
 
 # ---------- V1: D0 == SAA(1) ----------
 try:
     _, sol_d0, Vd0 = cplex_d0_solve(inst, 'aud_d0', retire_lstar=True, t_star=2)
     obj_d0 = sol_d0.objective_value
-    mdl, sol_s1, V1v = build_and_solve_saa(inst, mean_sc, 'aud_saa1', retire_lstar=True,
+    mdl, sol_s1, V1v = build_and_solve_saa(inst, traj_sc, 'aud_saa1', retire_lstar=True,
                                            t_star=2, require_cover=False, time_limit=600)
     obj_s1 = sol_s1.objective_value
     rel = abs(obj_d0 - obj_s1) / abs(obj_d0)

@@ -9,6 +9,9 @@
 import csv, json, os
 
 BASE = os.path.dirname(os.path.abspath(__file__)) + '/..'
+OUT_DIR = (os.path.join(BASE, 'model') if os.path.isdir(os.path.join(BASE, 'model'))
+           else os.path.join(BASE, 'src'))
+os.makedirs(OUT_DIR, exist_ok=True)
 
 # ---------- 需求（v3 官方分解，份额×年度官方总量） ----------
 YEAR_TOTAL = {1: 398.61, 2: 491.85, 3: 256.03}  # 万吨，官方年报；注：2023为工程渣土口径（已声明）
@@ -111,7 +114,7 @@ instance = {
     },
 }
 
-with open(f'{BASE}/src/instance_v1.json', 'w', encoding='utf-8') as f:
+with open(os.path.join(OUT_DIR, 'instance_v1.json'), 'w', encoding='utf-8') as f:
     json.dump(instance, f, ensure_ascii=False, indent=1)
 
 # ---------- 实例报告（人读核查用） ----------
@@ -137,7 +140,7 @@ for r in RECYCLING:
     lines.append(f"| {r[0]} | 资源化 | {r[2]*1e4:,.0f} | {r[3]*1e4:,.0f} | {r[3]/r[2]*100:.1f}% |")
 for l in LANDFILL:
     lines.append(f"| {l[0]} | 消纳 | {l[2]}万m³余量 | — | — |")
-with open(f'{BASE}/src/instance_report.md', 'w', encoding='utf-8') as f:
+with open(os.path.join(OUT_DIR, 'instance_report.md'), 'w', encoding='utf-8') as f:
     f.write('\n'.join(lines))
 print('\n'.join(lines[:8]))
-print('\n实例已生成: src/instance_v1.json, src/instance_report.md')
+print(f'\n实例已生成: {OUT_DIR}/instance_v1.json, {OUT_DIR}/instance_report.md')

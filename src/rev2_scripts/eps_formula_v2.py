@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
-"""ε* 闭式证书（V2.5）：全期需求/满配能力/库容的可行性下界。
-F_min(D) = D - (1-kappa) * min(S, D)
-DASH: eps_star = (R + (1-kappa) S) / D0 - 1  (D0>S 时)
-验证：real + 10 副本的 0.16/0.18 可行性；rho/phi 9 格的 DASH(0.10) 可行性。
+"""ε* 闭式证书（V2.5 修订）：全期需求/有效能力/库容的可行性下界。
+有效分拣上限 A=min(S, K/ρ)，其中 S 为分拣能力、K 为再生厂能力。
+F_min(D) = D - (1-kappa) * min(A, D)
+边界需求 D_max = R/kappa（若 R/kappa<=A），否则 R+(1-kappa)A。
+DASH: eps_star = D_max/D0 - 1。
+验证：real + 10 副本、rho/phi 网格、R 扰动、跨结构实例。
 """
 import json, os, sys
 import pandas as pd
@@ -28,7 +30,10 @@ def full_capacity(inst):
             * cfg['xJ'][j][t - 1]
             for j in inst['sorting'] for t in range(1, T + 1))
     R = sum(inst['landfill'][l]['cap_t'] for l in inst['landfill'])
-    return S, R
+    K = sum((inst['recycling'][k]['cap_t'] + inst['recycling'][k]['expand_step_t'] * 4)
+            * cfg['xK'][k][t - 1]
+            for k in inst['recycling'] for t in range(1, T + 1))
+    return S, R, K
 
 
 def predict(inst, rho=None, phi=None):
@@ -36,14 +41,19 @@ def predict(inst, rho=None, phi=None):
     rho = P['recyclable_ratio'] if rho is None else rho
     phi = P.get('product_yield', 1.0) if phi is None else phi
     kappa = (1 - rho) + rho * (1 - phi)
-    S, R = full_capacity(inst)
+    S, R, K = full_capacity(inst)
+    A = S if rho <= 1e-12 else min(S, K / rho)
     # 2024 峰值锚点（全期总量）
     D0 = 3 * sum(inst['demand'][i]['d']['2'] for i in inst['demand'])
-    if D0 > S:
-        eps = (R + (1 - kappa) * S) / D0 - 1
+    if kappa <= 1e-12:
+        d_max = float('inf')
+    elif R / kappa <= A:
+        d_max = R / kappa
     else:
-        eps = R / (kappa * D0) - 1
-    return {'D0': D0, 'S': S, 'R': R, 'kappa': kappa, 'eps_pred': eps}
+        d_max = R + (1 - kappa) * A
+    eps = d_max / D0 - 1
+    return {'D0': D0, 'S': S, 'K': K, 'A': A, 'R': R,
+            'kappa': kappa, 'D_max': d_max, 'eps_pred': eps}
 
 
 if __name__ == '__main__':

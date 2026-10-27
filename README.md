@@ -2,53 +2,75 @@
 
 Reproducible package for the paper *"A disposal-capacity certificate for robust CDW network design under demand drift and facility retirement: an application to Hohhot, China"*.
 
-## What this package contains
+## What is included
 
-- **Input data (CSV, repository root)** — the two external inputs of the case, both derived from official public sources of Hohhot, China (ecological-environment annual reports 2023–2025; urban-management facility bulletin 2025; statistical yearbook 2025; seventh national census) and from driving distances on the municipal road network:
-  - `cdw_generation_by_district_estimates_v3.csv` — district-level generation estimates and the 2023–2025 annual anchors
-  - `distance_matrix_wide_km.csv` — 29-node driving-distance matrix (rebuildable via any open routing engine from the released facility coordinates, which are embedded in `src/build_instance.py`)
-- **`src/`** — the model and the experiments: instance builder, deterministic program (CPLEX), two-stage sample-average program, drift-augmented support hedging (DASH), the service-level coverage constraint, the disposal-capacity certificate scripts, carbon accounting, experiment runners, verification scripts, and the open-source evaluation heuristic.
-- **`results/`** — one result file per study block: the main comparison across the eleven instances, the isolated re-solves of the slow cells, the penalty sweep, the leave-one-year-out backtests, the recovery and cost grids, the robustification ablation, the tightened reference optima used to certify the heuristic, and the certificate predictions.
-- **`src/VERIFICATION_REPORT.md`** — the cross-validation protocol (hand-computed tiny instance; conservation residuals; SAA and DASH degeneracy checks; heuristic gap against proven optima).
-- **`src/AUDIT_V23.md`, `src/AUDIT_V24.md`, `src/AUDIT_V25.md`** — the model-defect audit trail: the missing sorting-expansion variable, the terminal-stock fix, and the derivation and numerical verification of the disposal-capacity certificate.
+- **Official-data inputs (repository root)**
+  - `cdw_generation_by_district_estimates_v3.csv`: district generation estimates and annual anchors
+  - `distance_matrix_wide_km.csv`: 29-node road-distance matrix
+- **`src/`**: model builders, CPLEX programs, DASH, service-level coverage, the open-source evaluation heuristic, carbon accounting, audit scripts and experiment runners.
+- **`src/experiments/`**: archived result CSVs, certificate predictions, reference optima and first-stage configurations used by the analysis scripts.
+- **`src/VERIFICATION_REPORT.md` and `src/AUDIT_V23.md`–`AUDIT_V25.md`**: consistency checks, model-defect fixes and certificate validation records.
 
-## The model in one paragraph
+The model uses a multi-period location, capacity and allocation formulation for a four-echelon construction and demolition waste network. Sorting centres and recycling plants expand in modules, sorting centres hold buffers, inert spoil can be hauled directly, and landfill retirement is endogenous and irreversible. Service level is a constraint: a scenario-aware plan either serves all demand or is infeasible.
 
-A multi-period location, capacity, and allocation program for a four-echelon construction and demolition waste network. Sorting centres and recycling plants expand in 0.1 Mt modules, sorting centres hold buffers, inert spoil moves by direct haul, and landfill retirement is an endogenous, irreversible decision. Service level enters as a constraint rather than as a price, so a scenario-aware plan either serves the demand it was built for or is infeasible. The uncertainty treatment mixes the empirical measure of the three observed years with lifted demand scenarios, calibrated from official records rather than estimated from data.
+The disposal-capacity certificate uses the effective chain capacity `A = min(S, K/rho)` and the horizon-total condition `F_min(D) = D - (1-kappa) min(A,D) <= R`. The DASH ceiling is obtained from `D_max/D0 - 1`, where `D_max = R/kappa` when `R/kappa <= A`, and `R + (1-kappa)A` otherwise. This is a necessary condition for every configuration; it is tight for the instance family reported in the paper.
 
-## Reproducing the results
+## Environment
 
-Python 3.10+ with `docplex` + IBM CPLEX (exact benchmarks) and `scipy` (HiGHS, for the LP recourse and the evaluation heuristic).
+- Python 3.10 (tested with 3.10.19)
+- `numpy==1.26.4`, `scipy==1.14.1`, `pandas`, `docplex`, IBM CPLEX 22.1.1 for exact benchmarks
+- scipy/HiGHS is used for the LP recourse and the open-source evaluation heuristic
+
+Do not use NumPy 2.x with the pinned docplex version: `docplex 2.24.231` refers to `numpy.float_`, which was removed in NumPy 2.0.
+
+## Reproduce the main checks
+
+Run these commands from the **repository root**. All paths are relative to the checkout; no local absolute path is required.
 
 ```bash
-# 0. build the instance JSON from the two input CSVs
+# Build src/instance_v1.json and src/instance_report.md from the input CSVs
 python src/build_instance.py
 
-# 1. deterministic base case and consistency checks (requires CPLEX)
+# Deterministic and two-stage consistency checks (requires CPLEX)
 python src/cplex_d0.py
-
-# 2. two-stage sample-average program and degeneracy check
 python src/cplex_saa.py
-
-# 3. DASH and the check that epsilon = 0 reduces to the sample average
 python src/cplex_dro.py
 
-# 4. main experiments (methods x 10 randomized replicas x 200 shared scenarios)
-python src/run_experiments.py --stage all
-
-# 5. verification and cross-checks
-python src/rev2_scripts/audit_crosscheck.py
-python src/rev2_scripts/audit_fixcheck.py
-
-# 6. disposal-capacity certificate: prediction and numerical verification
-python src/eps_formula_v2.py
-python src/eps_formula_perturb.py
-
-# 7. statistical tests (replica-level Wilcoxon with Holm correction, Cliff's delta)
+# Replica-level statistics (requires the archived main CSV)
 python src/rev2_scripts/stats_v22.py
+
+# Certificate prediction and capacity-perturbation checks
+python src/rev2_scripts/eps_formula_v2.py
+python src/rev2_scripts/eps_formula_perturb.py
+
+# Carbon accounting with explicit raw/direct-haul counterfactual columns
+python src/rev2_scripts/run_co2_v24.py
+
+# Point-mass reference: a lower bound on the exact Wasserstein worst case
+python src/rev2_scripts/worstcase_reference.py
 ```
 
-The raw official documents (annual reports, bulletins, yearbook pages) are public records; they are not redistributed here. Facility coordinates are embedded in `src/build_instance.py` and are sufficient to rebuild the distance matrix with any open routing engine.
+`build_instance.py` writes `src/instance_v1.json`. The analysis scripts read that file and the archived files under `src/experiments/`; they do not require a paper directory or a user-specific path.
+
+For the small-instance heuristic benchmark, `src/rev2_scripts/gri_small_cplex.py` can be run after the main consistency checks. It uses CPLEX with `mip_gap=1e-9` and writes the reference results to `src/experiments/results_gri_small_cplex_tight.csv`.
+
+## Result map
+
+- `results_main_v22.csv`: main comparison, 11 instances × 5 methods (DASH dial 0.16)
+- `results_main_exactfix.csv`: isolated re-solves of slow main-table cells
+- `results_penalty_v22.csv`: penalty sweep and the DET/SAA crossover near 270 CNY/t
+- `results_loo_v22.csv`: leave-one-year-out backtests
+- `results_grid_v22.csv`, `results_rhophi_v22.csv`: cost/revenue and recovery sweeps
+- `results_ablation_v22.csv`: SAA/MV/DASH/ROB comparisons
+- `results_co2_v24.csv`: raw and direct-haul counterfactual transport/carbon columns
+- `results_worstcase_ref.csv`: point-mass lower-bound reference, not a CCG solution
+- `eps_formula_v2_instances.csv`, `eps_formula_v2_rhophi.csv`: certificate predictions
+- `eps_formula_perturb.csv`: landfill-volume perturbation verification
+- `results_certificate_cross_structure.csv`: changed demand/sorting/landfill structures
+- `results_certificate_blind_points.csv`: out-of-grid recovery blind tests
+- `results_gri_small_cplex_tight.csv`, `results_gri_final_table.csv`: tightened reference optima and multi-seed heuristic results
+
+Raw official documents are public records and are not redistributed. Facility coordinates are embedded in `src/build_instance.py`; the distance matrix can be rebuilt with an open routing engine.
 
 ## Citation
 

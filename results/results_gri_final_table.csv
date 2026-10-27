@@ -1,0 +1,12 @@
+instance,n_seeds,attains_opt,hit_seeds,best_gap_pct,mean_gap_pct,worst_gap_pct,gri_time_s,cplex_time_s
+real,15,True,"6,7",0.0,0.532,3.3363,375.0,31.0
+batch1,15,True,12,0.0,0.1465,0.9712,336.0,31.0
+batch2,5,True,"3,refine",0.0,0.2498,1.0224,322.0,29.0
+batch3,5,True,refine,0.0,0.7356,2.0578,333.0,31.0
+batch4,15,True,10,0.0,0.4793,1.2759,384.0,38.0
+batch5,15,True,8,0.0,0.2967,1.2288,333.0,43.0
+batch6,15,True,"8,12",0.0,0.4617,2.5156,337.0,39.0
+batch7,5,True,"2,refine",-0.0,0.0339,0.0816,315.0,22.0
+batch8,5,True,refine,0.0,0.2136,0.5843,327.0,40.0
+batch9,15,False,,0.00191,0.4011,2.0745,355.0,26.0
+batch10,5,True,refine,0.0,0.5738,1.9279,315.0,20.0

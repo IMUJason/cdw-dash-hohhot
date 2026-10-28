@@ -1,0 +1,2 @@
+case,cplex_time,cplex_obj,cplex_gap,cplex_proved
+clone_m6,1829.361268043518,5417449352.491133,0.1751236669938555,False

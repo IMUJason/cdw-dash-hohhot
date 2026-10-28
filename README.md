@@ -11,7 +11,7 @@ Reproducible package for the paper *"A disposal-capacity certificate for robust 
 - **`src/experiments/`**: archived result CSVs, certificate predictions, reference optima and first-stage configurations used by the analysis scripts.
 - **`src/VERIFICATION_REPORT.md` and `src/AUDIT_V23.md`–`AUDIT_V25.md`**: consistency checks, model-defect fixes and certificate validation records.
 
-The model uses a multi-period location, capacity and allocation formulation for a four-echelon construction and demolition waste network. Sorting centres and recycling plants expand in modules, sorting centres hold buffers, inert spoil can be hauled directly, and landfill retirement is endogenous and irreversible. Service level is a constraint: a scenario-aware plan either serves all demand or is infeasible.
+The model uses a multi-period location, capacity and allocation formulation for a four-echelon construction and demolition waste network. Sorting centers and recycling plants expand in modules, sorting centers hold buffers, inert spoil can be hauled directly, and landfill retirement is endogenous and irreversible. Service level is a constraint: a scenario-aware plan either serves all demand or is infeasible.
 
 The disposal-capacity certificate uses the effective chain capacity `A = min(S, K/rho)` and the horizon-total condition `F_min(D) = D - (1-kappa) min(A,D) <= R`. The DASH ceiling is obtained from `D_max/D0 - 1`, where `D_max = R/kappa` when `R/kappa <= A`, and `R + (1-kappa)A` otherwise. This is a necessary condition for every configuration; it is tight for the instance family reported in the paper.
 
@@ -63,7 +63,14 @@ For the small-instance heuristic benchmark, `src/rev2_scripts/gri_small_cplex.py
 - `results_grid_v22.csv`, `results_rhophi_v22.csv`: cost/revenue and recovery sweeps
 - `results_ablation_v22.csv`: SAA/MV/DASH/ROB comparisons
 - `results_co2_v24.csv`: raw and direct-haul counterfactual transport/carbon columns
-- `results_worstcase_ref.csv`: point-mass lower-bound reference, not a CCG solution
+- `results_worstcase_ref.csv`: point-mass stress reference over the lifted support; upper reference that brackets the calibrated mixture from above, not ball-feasible and not a CCG solution
+- `results_coverage_counterfactual.csv`: SAA30 with and without the service-level constraint (fixed capital 213.8 vs 238.2 M CNY, objective 833.096 vs 834.836 M)
+- `results_eps017_check.csv`: certificate check, DASH(0.17) on the real instance is infeasible (2 s)
+- `results_symmetry_test_m6.csv`: six-fold scale clone, CPLEX incumbent at 17.5% gap after 30 min (no certificate)
+- `results_main_v22.csv`: main table; the two DET cells re-solved in isolation after concurrent-run timing pollution (batch1 689.85 M, batch4 776.52 M)
+- `solution_d0_base.json`: archived base-case plan, refreshed to the corrected landfill vintage (objective 718.90 M CNY)
+- `cdw_treatment_facilities_2023_2025.csv`: facility registry 2023-2025 with report vintages; the 2024 remaining volume of the largest site is 413.1 thousand m3 (design volume 526)
+- `make_figures.py`, `make_graphical_abstract.py`: regenerate all figures and the graphical abstract from the CSVs in this repository
 - `eps_formula_v2_instances.csv`, `eps_formula_v2_rhophi.csv`: certificate predictions
 - `eps_formula_perturb.csv`: landfill-volume perturbation verification
 - `results_certificate_cross_structure.csv`: changed demand/sorting/landfill structures

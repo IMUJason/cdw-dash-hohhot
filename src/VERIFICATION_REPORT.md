@@ -50,3 +50,12 @@
 以上可追溯链已闭合：**数学规范 ↔ CPLEX ↔ LP ↔ ALNS 四方一致**。请确认：
 1. 是否批准进入正式实验（DRO/Wasserstein 层 + 基线四件套 + 灵敏度 + 回测）？
 2. 成本参数假设区间是否需要调整（当前：运输 0.6–1.5 元/吨·km、收益 0–40 元/吨、φ 0.7–0.95）？
+
+## Second-pass audit (2026-10-28)
+
+- `results_main_v22.csv`: two DET main-table cells (batch1, batch4) were produced under concurrent-run timing pollution; isolated CPLEX re-solves returned cheaper objectives (689,847,760.0 and 776,515,465.0) and are backfilled. Replica aggregates are unchanged at reported precision.
+- `results_symmetry_test_m6.csv`: six-fold clone re-solved in isolation; CPLEX incumbent 5,417,449,352 at 17.5% gap after 1,829 s. No optimality claim is made at that size.
+- `results_coverage_counterfactual.csv`: SAA30 without the service constraint leaves 466,700 t of the 2024 peak anchor unserved; imposing it costs 0.21% more objective and 24.4 M CNY more fixed capital.
+- `results_eps017_check.csv`: DASH(0.17) on the real instance is infeasible, consistent with the certificate (epsilon* = 0.1647).
+- `results_worstcase_ref.csv`: reference relabeled; the point mass is an upper stress reference over the lifted support and is not feasible in the Wasserstein ball.
+- `solution_d0_base.json`: refreshed to the corrected landfill vintage (largest site 413.1 thousand m3 remaining in 2024, not the 526 design volume); objective 718,902,859 CNY at 9.0e-05 gap.

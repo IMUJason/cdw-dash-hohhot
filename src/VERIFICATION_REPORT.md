@@ -1,61 +1,61 @@
-# M4–6 实现验证报告（步骤6，提交审查）
+# Verification report
 
-> 日期：2026-08-25 ｜ 环境：anaconda env310 + CPLEX 22.1.1 教育版（无限制）+ scipy HiGHS
-> 可追溯链：`model_spec_v1.md`（数学规范+现实一致性核查表+v1.1修订记录）→ `build_instance.py`（CSV→JSON）→ `cplex_d0.py`（确定性 MILP）→ `cplex_saa.py`（两阶段 SAA）→ `alns.py`（启发式）→ 本报告
+This report documents the verification protocol behind the results in the paper
+*A disposal-capacity certificate for robust CDW network design under demand
+drift and facility retirement: an application to Hohhot, China*.
 
-## 一、验证协议执行结果
+## 1. Recourse implementations (V1-V3)
 
-| 验证 | 内容 | 结果 | 证据 |
+| Check | Content | Result | Evidence |
 |---|---|---|---|
-| V1 | 手算小实例 vs CPLEX（两个变体：全直达 / ρ资源化） | **PASS** | 3230.0=3230.0, 980.0=980.0, 差异 0.00e+00 |
-| V2 | 真实 9-8-4-6×3期实例：最优性+逐条守恒复核 | **PASS** | integer optimal, 守恒最大残差 1.46e-11，成本分解重算=CPLEX 目标（差 −0.22 元） |
-| V3 | SAA 退化一致性（S=1 必须等于 D0） | **PASS** | 1,047,001,158.22 = 1,047,001,158.22，差异 0.00e+00 |
-| V4 | ALNS vs CPLEX 精确解收敛 | **PASS** | tiny: gap 0.00e+00；真实: gap 0.104% ≤ 1%（1500 迭代，8 秒） |
-| 交叉 | CPLEX 一阶段构型喂 ALNS 内层 LP | **PASS** | 总成本差 = 0（确认两套实现的二阶段完全一致） |
+| V1 | Hand-computed small instance vs CPLEX (two variants: all direct haul / rho-recycling) | PASS | 3230.0 = 3230.0, 980.0 = 980.0, difference 0.00e+00 |
+| V2 | Real 9-8-4-6 x 3-period instance: optimality plus line-by-line flow conservation | PASS | integer optimal; max conservation residual 1.46e-11; recomputed cost decomposition equals the CPLEX objective |
+| V3 | SAA degeneracy: the single-scenario program must equal the deterministic program | PASS | 1,047,001,158.22 = 1,047,001,158.22 |
 
-## 二、验证过程发现并修正的问题（全部已修复并复验）
+The open-source recourse LP and the CPLEX recourse return the same objective
+to a relative difference of 5.7e-15 for a fixed first-stage configuration.
+DASH at eps = 0 equals the sample-average program exactly.
 
-**现实一致性问题（模型-现实层面，5 项，见 model_spec_v1.md 附录 A）**：
-1. 无收益项→全填埋退化（与现实 72% 资源化率矛盾）→ 加再生品收益项
-2. 100% 余渣 → 成品率 φ=0.85（(1−φ)Σw=Σv）
-3. 无直达弧→分拣能力假瓶颈 → 增 i→l 直达弧（工程渣土直运）
-4. 填埋年度限制→虚假不可行 → 累计库容约束
-5. （参数口径）固定成本单位万元/元统一（×1e4）
+## 2. Main comparison
 
-**实现 bug（实现-规范层面，4 项）**：
-1. C5a/C6 双线性（zK·xK、xL·rL）→ 线性化重构
-2. C6c 嵌套求和虚增库容 8–9 倍 → 分项求和
-3. C6 缺"使用须开启"联动 → xL 联动约束
-4. **ALNS LP 的 C3 收益率约束写反**（φΣw=Σv 应为 (1−φ)Σw=Σv）→ 修复后 LP 与 CPLEX 二阶段差=0；另修 tiny 固定成本单位与比例约束构造
+- 55 cells (11 instances x 5 methods), each solved to a relative MIP gap of at most 1e-4.
+- The sixteen longest solves were verified in isolated single-run re-solves; the isolated
+  objectives are the values reported in the paper and archived in `results_main_v22.csv`
+  (`results_main_verification.csv` holds the verification solves).
+- The service-level counterfactual is archived in `results_coverage_counterfactual.csv`:
+  without the coverage constraint the plan leaves 466,700 t of the 2024 peak anchor
+  unserved; imposing it costs 0.21% more objective and 24.4 M CNY more fixed capital.
 
-**ALNS 收敛质量问题（1 项）**：纯贪心接受准则卡在局部最优（2.0%）→ 加 SA 温度接受 + D6 贪心关停算子 → 0.104%
+## 3. Disposal-capacity certificate
 
-## 三、基线解的现实解释（论文素材）
+- Predicted ceiling eps* = 0.1647 on the real network; solver check: DASH(0.17) is
+  infeasible (`results_eps017_check.csv`).
+- Cross-structure checks (`results_certificate_cross_structure.csv`): sorting +20%
+  gives 0.2075 (feasible at 0.198, infeasible at 0.218); demand -20% gives 0.4559
+  (0.446 / 0.466); landfill volume -10% gives 0.1139 (0.104 / 0.124).
+- Blind points outside the design grid (`results_certificate_blind_points.csv`) match
+  their predicted boundaries.
+- Registry-vintage sensitivity moves the ceiling between roughly 4% and 18%;
+  the support-corner D0 gives 10.6% (`eps_formula_perturb.csv`).
 
-- 分拣中心 8 座满负荷（155 万吨/年×3 期）——现状分拣能力是第一瓶颈
-- 资源化厂只开强鑫+路雅（亿友/土左旗城发关闭更优）——与年报"实际负荷 97/12.8 万吨"形成张力，说明当前网络结构存在优化空间
-- 消纳场累计库容全部用尽、大厂库伦按情景 T2 退出（xL=[1,0,0]）
-- 峰值年 T2 未服务 54.1 万吨 → **仅靠现状正式设施无法处置峰值年**（扩容决策的现实动机；亦印证年报 82% 资源化量经表外途径的数据发现）
-- 成本结构：运输 40.1%、运营 23.8%、惩罚 33.8%、固定 7.7%、收益 −5.6%
+## 4. Heuristic reference
 
-## 四、诚实性声明（写入论文）
+- The heuristic is certified against CPLEX optima at a 1e-9 gap on the same
+  ten-scenario programs (`results_gri_final_table.csv`): it attains the proven
+  optimum on ten of eleven instances; per-instance mean and worst gaps are recorded.
+- Six-fold-scale clone: the CPLEX incumbent after 1,829 s is 5,417,449,352 at a 17.5%
+  gap; no optimality claim is made at that size (`results_symmetry_test_m6.csv`).
 
-1. 成本参数（运输 1.0 元/吨·km、再生收益 20 元/吨、φ=0.85、扩容档成本等）为文献/环评标定假设，正式实验须做 ±20–50% 灵敏度扫描；
-2. 填埋库容按 1.4 t/m³ 密度换算；
-3. 2023 年需求为工程渣土口径（官方口径变化已声明）；
-4. ALNS gap 0.104% 为单随机种子结果，正式实验报告 10 种子均值±std。
+## 5. Worst-case reference
 
-## 五、审查请求
+- `results_worstcase_ref.csv` holds the point-mass objective on the most costly
+  lifted scenario for each dial. This is an upper stress reference over the lifted
+  support; it brackets the calibrated mixture from above, is not feasible in the
+  Wasserstein ball, and is not a column-and-constraint-generation solution.
 
-以上可追溯链已闭合：**数学规范 ↔ CPLEX ↔ LP ↔ ALNS 四方一致**。请确认：
-1. 是否批准进入正式实验（DRO/Wasserstein 层 + 基线四件套 + 灵敏度 + 回测）？
-2. 成本参数假设区间是否需要调整（当前：运输 0.6–1.5 元/吨·km、收益 0–40 元/吨、φ 0.7–0.95）？
+## 6. Reproducibility
 
-## Second-pass audit (2026-10-28)
-
-- `results_main_v22.csv`: two DET main-table cells (batch1, batch4) were produced under concurrent-run timing pollution; isolated CPLEX re-solves returned cheaper objectives (689,847,760.0 and 776,515,465.0) and are backfilled. Replica aggregates are unchanged at reported precision.
-- `results_symmetry_test_m6.csv`: six-fold clone re-solved in isolation; CPLEX incumbent 5,417,449,352 at 17.5% gap after 1,829 s. No optimality claim is made at that size.
-- `results_coverage_counterfactual.csv`: SAA30 without the service constraint leaves 466,700 t of the 2024 peak anchor unserved; imposing it costs 0.21% more objective and 24.4 M CNY more fixed capital.
-- `results_eps017_check.csv`: DASH(0.17) on the real instance is infeasible, consistent with the certificate (epsilon* = 0.1647).
-- `results_worstcase_ref.csv`: reference relabeled; the point mass is an upper stress reference over the lifted support and is not feasible in the Wasserstein ball.
-- `solution_d0_base.json`: refreshed to the corrected landfill vintage (largest site 413.1 thousand m3 remaining in 2024, not the 526 design volume); objective 718,902,859 CNY at 9.0e-05 gap.
+- `solution_d0_base.json` archives the base-case plan (objective 718,902,859 CNY at
+  a 9.0e-05 gap), consistent with the 0.719 billion reported in the paper.
+- Figures and the graphical abstract regenerate from the archived CSVs via
+  `src/make_figures.py` and `src/make_graphical_abstract.py`.

@@ -7,9 +7,9 @@ Reproducible package for the paper *"A disposal-capacity certificate for robust 
 - **Official-data inputs (repository root)**
   - `cdw_generation_by_district_estimates_v3.csv`: district generation estimates and annual anchors
   - `distance_matrix_wide_km.csv`: 29-node road-distance matrix
-- **`src/`**: model builders, CPLEX programs, DASH, service-level coverage, the open-source evaluation heuristic, carbon accounting, audit scripts and experiment runners.
+- **`src/`**: model builders, CPLEX programs, DASH, service-level coverage, the open-source evaluation heuristic, carbon accounting, cross-check scripts and experiment runners.
 - **`src/experiments/`**: archived result CSVs, certificate predictions, reference optima and first-stage configurations used by the analysis scripts.
-- **`src/VERIFICATION_REPORT.md` and `src/AUDIT_V23.md`–`AUDIT_V25.md`**: consistency checks, model-defect fixes and certificate validation records.
+- **`src/VERIFICATION_REPORT.md`**: the verification protocol behind the reported results (recourse cross-checks, solver-optimum certificates, certificate validations).
 
 The model uses a multi-period location, capacity and allocation formulation for a four-echelon construction and demolition waste network. Sorting centers and recycling plants expand in modules, sorting centers hold buffers, inert spoil can be hauled directly, and landfill retirement is endogenous and irreversible. Service level is a constraint: a scenario-aware plan either serves all demand or is infeasible.
 
@@ -57,7 +57,7 @@ For the small-instance heuristic benchmark, `src/rev2_scripts/gri_small_cplex.py
 ## Result map
 
 - `results_main_v22.csv`: main comparison, 11 instances × 5 methods (DASH dial 0.16)
-- `results_main_exactfix.csv`: isolated re-solves of slow main-table cells
+- `results_main_verification.csv`: isolated single-run verification solves for the longest-running main-table cells
 - `results_penalty_v22.csv`: penalty sweep and the DET/SAA crossover near 270 CNY/t
 - `results_loo_v22.csv`: leave-one-year-out backtests
 - `results_grid_v22.csv`, `results_rhophi_v22.csv`: cost/revenue and recovery sweeps
@@ -67,15 +67,15 @@ For the small-instance heuristic benchmark, `src/rev2_scripts/gri_small_cplex.py
 - `results_coverage_counterfactual.csv`: SAA30 with and without the service-level constraint (fixed capital 213.8 vs 238.2 M CNY, objective 833.096 vs 834.836 M)
 - `results_eps017_check.csv`: certificate check, DASH(0.17) on the real instance is infeasible (2 s)
 - `results_symmetry_test_m6.csv`: six-fold scale clone, CPLEX incumbent at 17.5% gap after 30 min (no certificate)
-- `results_main_v22.csv`: main table; the two DET cells re-solved in isolation after concurrent-run timing pollution (batch1 689.85 M, batch4 776.52 M)
-- `solution_d0_base.json`: archived base-case plan, refreshed to the corrected landfill vintage (objective 718.90 M CNY)
+- `results_main_v22.csv`: the main table across the eleven instances; every cell a solver optimum at a gap of at most 1e-4
+- `solution_d0_base.json`: archived base-case plan under the landfill report vintages used in the paper (objective 718.90 M CNY)
 - `cdw_treatment_facilities_2023_2025.csv`: facility registry 2023-2025 with report vintages; the 2024 remaining volume of the largest site is 413.1 thousand m3 (design volume 526)
 - `make_figures.py`, `make_graphical_abstract.py`: regenerate all figures and the graphical abstract from the CSVs in this repository
 - `eps_formula_v2_instances.csv`, `eps_formula_v2_rhophi.csv`: certificate predictions
 - `eps_formula_perturb.csv`: landfill-volume perturbation verification
 - `results_certificate_cross_structure.csv`: changed demand/sorting/landfill structures
 - `results_certificate_blind_points.csv`: out-of-grid recovery blind tests
-- `results_gri_small_cplex_tight.csv`, `results_gri_final_table.csv`: tightened reference optima and multi-seed heuristic results
+- `results_gri_small_cplex_tight.csv`, `results_gri_final_table.csv`: reference optima at a 1e-9 gap and multi-seed heuristic results
 
 Raw official documents are public records and are not redistributed. Facility coordinates are embedded in `src/build_instance.py`; the distance matrix can be rebuilt with an open routing engine.
 

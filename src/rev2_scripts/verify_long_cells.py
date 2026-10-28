@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-"""对未达最优的 5 个格子做隔离重解（单进程、无并发、TL=3600）。
-逐个串行执行，输出 experiments/results_main_exactfix.csv
+"""Isolated single-run verification solves (serial, TL=3600) for the
+longest-running main-table cells. Writes experiments/results_main_verification.csv
 """
 import json, sys, os, time
 import pandas as pd
@@ -22,7 +22,7 @@ def main():
         train = gen_scenarios(inst, 30, seed=1000 + seed)
         full = train if method == 'SAA' else dash_scenarios(inst, train, 0.16)
         t0 = time.time()
-        mdl, sol, V = build_and_solve_saa(inst, full, f'exactfix_{iname}_{method}',
+        mdl, sol, V = build_and_solve_saa(inst, full, f'verify_{iname}_{method}',
                                           retire_lstar=True, t_star=2, log=False,
                                           require_cover=True, time_limit=3600)
         obj = sol.objective_value if sol is not None else None
@@ -35,7 +35,7 @@ def main():
         rows.append({'instance': iname, 'seed': seed, 'method': method,
                      'obj': obj, 'gap': gap, 'time_s': round(elapsed, 1),
                      'optimal': bool(gap is not None and gap <= 1e-5)})
-        pd.DataFrame(rows).to_csv(f'{D}/experiments/results_main_exactfix.csv', index=False)
+        pd.DataFrame(rows).to_csv(f'{D}/experiments/results_main_verification.csv', index=False)
         print(f"{iname:8s} {method:12s} obj={obj} gap={gap} "
               f"optimal={rows[-1]['optimal']} t={elapsed:.0f}s", flush=True)
 

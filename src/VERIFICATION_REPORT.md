@@ -53,6 +53,17 @@ DASH at eps = 0 equals the sample-average program exactly.
   support; it brackets the calibrated mixture from above, is not feasible in the
   Wasserstein ball, and is not a column-and-constraint-generation solution.
 
+## 5b. Direct-haul shares
+
+- The archived base-case plan's recourse on the official 2023-25 trajectory routes
+  49.1% of the horizon stream by direct haul (period shares 48.0/62.5/25.0%); the
+  five outer counties send 78-100% of their stream to their own county landfills.
+  Reproduce with `cplex_d0.py` (V2 flow printout).
+- Under the 2024 peak anchor with the coverage constraint, at least
+  (D-R)/(0.68 D) = 72.4% of the stream must pass sorting, capping direct haul at
+  27.7%; the full-build recourse LP sits at 27.6%. The certificate arithmetic and
+  the LP agree.
+
 ## 6. Reproducibility
 
 - `solution_d0_base.json` archives the base-case plan (objective 718,902,859 CNY at
